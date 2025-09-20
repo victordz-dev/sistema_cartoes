@@ -1,0 +1,159 @@
+@startuml
+' Configurações para melhorar a aparência
+skinparam classAttributeIconSize 0
+skinparam packageStyle rect
+hide empty members
+
+' --- PACOTE VIEW ---
+package "br.com.fiap.view" {
+    class App {
+        + {static} main(String[] args)
+    }
+}
+
+' --- PACOTE CONTROLLER ---
+package "br.com.fiap.controller" {
+    class ClienteController {
+        - clienteDAO: ClienteDAO
+        + cadastrarCliente(...)
+        + buscarCliente(cpf): Cliente
+    }
+    class CartaoController {
+        - cartaoBO: CartaoBO
+        - cartaoDAO: CartaoDAO
+        + solicitarCartao(...)
+        + buscarPorNumero(numero): Cartao
+    }
+    class TransacaoController {
+        - transacaoBO: TransacaoBO
+        - transacaoDAO: TransacaoDAO
+        + registrarCompra(...)
+        + consultarFatura(...)
+        + pagarFatura(...)
+    }
+}
+
+' --- PACOTE BUSINESS OBJECT (BO) ---
+package "br.com.fiap.bo" {
+    class CartaoBO {
+        - cartaoDAO: CartaoDAO
+        + solicitarCartao(...)
+    }
+    class TransacaoBO {
+        - transacaoDAO: TransacaoDAO
+        - cartaoDAO: CartaoDAO
+        + registrarCompra(...)
+        + consultarFatura(...)
+        + pagarFatura(...)
+    }
+    class BeneficiosCartaoBO {
+        - {static} beneficios: Map
+        + {static} getBeneficios(bandeira): List
+    }
+}
+
+' --- PACOTE DAO (Interfaces e Implementações) ---
+package "br.com.fiap.dao" {
+    interface ClienteDAO
+    interface CartaoDAO
+    interface TransacaoDAO
+
+    class ClienteDAOImpl {
+        + inserir(cliente)
+        + buscarPorCpf(cpf)
+    }
+    class CartaoDAOImpl {
+        + inserir(cartao)
+        + buscarPorNumero(numero)
+        + atualizar(cartao)
+    }
+    class TransacaoDAOImpl {
+        + inserir(transacao)
+        + listarAbertasPorCartao(...)
+        + atualizarStatus(...)
+    }
+}
+
+' --- PACOTE MODEL ---
+package "br.com.fiap.model" {
+    class Cliente {
+      - id: int
+      - cpf: String
+      - nome: String
+    }
+    class Cartao {
+      - id: int
+      - numero: String
+      - bandeira: String
+      - limiteDisponivel: double
+    }
+    class Transacao {
+      - id: int
+      - data: LocalDateTime
+      - valor: double
+      - status: String
+    }
+}
+
+' --- PACOTES DE PADRÕES E EXCEÇÕES ---
+package "br.com.fiap.factory" {
+    class DAOFactory {
+        + {static} getClienteDAO(): ClienteDAO
+        + {static} getCartaoDAO(): CartaoDAO
+        + {static} getTransacaoDAO(): TransacaoDAO
+    }
+}
+
+package "br.com.fiap.singleton" {
+    class Conexao {
+        - {static} conexao: Connection
+        - Conexao()
+        + {static} getConexao(): Connection
+    }
+}
+
+package "br.com.fiap.exception" {
+    class RegraNegocioException
+    class LimiteInsuficienteException
+    ' ... outras exceções ...
+}
+
+
+' --- RELACIONAMENTOS ---
+
+' View -> Controller
+App ..> ClienteController
+App ..> CartaoController
+App ..> TransacaoController
+
+' Controller -> BO e Factory
+ClienteController ..> DAOFactory
+ClienteController o-- ClienteDAO
+CartaoController ..> DAOFactory
+CartaoController o-- CartaoBO
+TransacaoController ..> DAOFactory
+TransacaoController o-- TransacaoBO
+
+' BO -> DAO (Interfaces)
+CartaoBO o-- CartaoDAO
+TransacaoBO o-- TransacaoDAO
+TransacaoBO o-- CartaoDAO
+
+' Realização (Implementação de Interfaces)
+ClienteDAOImpl ..|> ClienteDAO
+CartaoDAOImpl ..|> CartaoDAO
+TransacaoDAOImpl ..|> TransacaoDAO
+
+' DAOImpl -> Singleton e Model
+ClienteDAOImpl ..> Conexao : <<usa>>
+ClienteDAOImpl ..> Cliente
+CartaoDAOImpl ..> Conexao : <<usa>>
+CartaoDAOImpl ..> Cartao
+TransacaoDAOImpl ..> Conexao : <<usa>>
+TransacaoDAOImpl ..> Transacao
+
+' Associações entre Models
+Cliente "1" -- "0..*" Cartao : possui
+Cartao "1" -- "0..*" Transacao : registra
+
+@enduml
